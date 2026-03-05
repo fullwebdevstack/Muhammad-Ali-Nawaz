@@ -1,0 +1,7 @@
+/* Media Queries for Responsive Devices
+   Important Breakpoints are:
+   - min-width: 400px (for small devices like phones)  
+   - min-width: 768px (for medium devices like tablets)
+   - min-width: 1024px (for large devices like desktops)
+*/
+

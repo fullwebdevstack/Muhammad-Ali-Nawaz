@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SEREPHINE — Quote Cycler</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Montserrat:wght@300;400&display=swap" rel="stylesheet"/>
+
+  <style>
+    /* ══════════════════════════════════
+       BRAND VARIABLES — SEREPHINE
+    ══════════════════════════════════ */
+    :root {
+      --bg:           #0a0a0a;
+      --gold:         #c9a96e;
+      --gold-light:   #e8d5a3;
+      --gold-dim:     rgba(201, 169, 110, 0.15);
+      --gold-border:  rgba(201, 169, 110, 0.22);
+      --text:         #f0e6d3;
+      --text-muted:   rgba(240, 230, 211, 0.45);
+
+      /* timing */
+      --hold:    3800ms;   /* how long quote stays visible */
+      --fade-in:  700ms;
+      --fade-out: 500ms;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    /* ══════════════════════════════════
+       OUTER SECTION WRAPPER
+    ══════════════════════════════════ */
+    .quote-section {
+      width: 100%;
+      max-width: 860px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 36px;
+    }
+
+    /* eyebrow label */
+    .quote-eyebrow {
+      font-size: 9px;
+      font-weight: 400;
+      letter-spacing: 0.5em;
+      text-transform: uppercase;
+      color: var(--gold);
+      opacity: 0.7;
+    }
+
+    /* ══════════════════════════════════
+       THE CONTAINER — FIXED SIZE, NEVER JUMPS
+    ══════════════════════════════════ */
+    .quote-container {
+      width: 100%;
+      /* Fixed height — adjust this ONE value to resize */
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 48px 52px;
+      border: 1px solid var(--gold-border);
+      background: #0f0f0f;
+      overflow: hidden;
+
+      /* no layout shift — ever */
+      contain: layout style;
+    }
+
+    /* top-left corner bracket */
+    .quote-container::before {
+      content: '';
+      position: absolute;
+      top: 14px; left: 14px;
+      width: 20px; height: 20px;
+      border-top: 1px solid var(--gold);
+      border-left: 1px solid var(--gold);
+      opacity: 0.4;
+    }
+
+    /* bottom-right corner bracket */
+    .quote-container::after {
+      content: '';
+      position: absolute;
+      bottom: 14px; right: 14px;
+      width: 20px; height: 20px;
+      border-bottom: 1px solid var(--gold);
+      border-right: 1px solid var(--gold);
+      opacity: 0.4;
+    }
+
+    /* ambient glow behind text */
+    .quote-glow {
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(201,169,110,0.06) 0%, transparent 70%);
+      pointer-events: none;
+      transition: opacity 1s ease;
+    }
+
+    /* ══════════════════════════════════
+       QUOTE SLOTS — two layers for crossfade
+    ══════════════════════════════════ */
+    .quote-slot {
+      position: absolute;
+      inset: 48px 52px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 18px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--fade-in) ease,
+                  transform var(--fade-in) cubic-bezier(0.22,1,0.36,1);
+      transform: translateY(12px);
+    }
+
+    .quote-slot.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .quote-slot.exit {
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity var(--fade-out) ease,
+                  transform var(--fade-out) ease;
+    }
+
+    /* ── big decorative quote mark ── */
+    .quote-mark {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 64px;
+      font-weight: 300;
+      line-height: 0.5;
+      color: var(--gold);
+      opacity: 0.2;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    /* ── the actual quote text ── */
+    .quote-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-weight: 300;
+      font-size: clamp(18px, 3vw, 26px);
+      line-height: 1.6;
+      letter-spacing: 0.02em;
+      color: var(--text);
+      max-width: 640px;
+    }
+
+    /* ── attribution line ── */
+    .quote-author {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .quote-author::before,
+    .quote-author::after {
+      content: '';
+      display: block;
+      width: 28px;
+      height: 1px;
+      background: var(--gold);
+      opacity: 0.4;
+    }
+
+    .quote-author span {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 9px;
+      font-weight: 400;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--gold);
+      opacity: 0.7;
+    }
+
+    /* ══════════════════════════════════
+       PROGRESS BAR (runs along bottom)
+    ══════════════════════════════════ */
+    .quote-progress {
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 1px;
+      background: linear-gradient(90deg, var(--gold), var(--gold-light));
+      width: 0%;
+      opacity: 0.6;
+    }
+
+    .quote-progress.running {
+      animation: progressBar var(--hold) linear forwards;
+    }
+
+    @keyframes progressBar {
+      from { width: 0%; }
+      to   { width: 100%; }
+    }
+
+    /* ══════════════════════════════════
+       DOTS NAVIGATION
+    ══════════════════════════════════ */
+    .quote-dots {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .q-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--gold-border);
+      border: 1px solid var(--gold-border);
+      cursor: pointer;
+      transition: all 0.35s ease;
+    }
+
+    .q-dot.active {
+      background: var(--gold);
+      border-color: var(--gold);
+      box-shadow: 0 0 7px rgba(201,169,110,0.5);
+      transform: scale(1.5);
+    }
+
+    /* ── mobile ── */
+    @media (max-width: 600px) {
+      .quote-container {
+        padding: 40px 28px;
+        min-height: 200px;
+      }
+      .quote-slot {
+        inset: 40px 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<section class="quote-section">
+
+  <p class="quote-eyebrow">The SEREPHINE Philosophy</p>
+
+  <!-- ════════════════════════════════
+       CONTAINER — size never changes
+  ════════════════════════════════ -->
+  <div class="quote-container" id="quoteBox">
+    <div class="quote-glow"></div>
+    <div class="quote-progress" id="progressBar"></div>
+    <!-- JS injects quote slots here -->
+  </div>
+
+  <!-- dots -->
+  <div class="quote-dots" id="quoteDots"></div>
+
+</section>
+
+<script>
+  /* ══════════════════════════════════════
+     QUOTES — edit these freely
+  ══════════════════════════════════════ */
+  const QUOTES = [
+    {
+      text: "Adorn yourself with pieces that tell your story.",
+      author: "SEREPHINE"
+    },
+    {
+      text: "True luxury is not worn — it is felt, from within.",
+      author: "The Atelier"
+    },
+    {
+      text: "Every piece is a quiet declaration of who you are.",
+      author: "SEREPHINE"
+    },
+    {
+      text: "Craftsmanship is the language of those who refuse to compromise.",
+      author: "The House"
+    },
+    {
+      text: "Elegance is the only beauty that never fades.",
+      author: "Audrey Hepburn"
+    },
+    {
+      text: "Wear it like armour. Walk like you own the silence.",
+      author: "SEREPHINE"
+    },
+  ];
+
+  /* ══════════════════════════════════════
+     TIMING — mirror your CSS variables
+  ══════════════════════════════════════ */
+  const HOLD     = 3800;
+  const FADE_IN  = 700;
+  const FADE_OUT = 500;
+
+  /* ── BUILD DOM ── */
+  const box      = document.getElementById('quoteBox');
+  const dotsWrap = document.getElementById('quoteDots');
+  const progBar  = document.getElementById('progressBar');
+
+  // create one slot per quote
+  const slots = QUOTES.map((q, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'quote-slot';
+    slot.innerHTML = `
+      <div class="quote-mark">"</div>
+      <p  class="quote-text">${q.text}</p>
+      <div class="quote-author"><span>${q.author}</span></div>`;
+    box.appendChild(slot);
+
+    // dot
+    const dot = document.createElement('div');
+    dot.className = 'q-dot';
+    dot.addEventListener('click', () => jumpTo(i));
+    dotsWrap.appendChild(dot);
+
+    return { slot, dot };
+  });
+
+  /* ── STATE ── */
+  let current  = 0;
+  let timer    = null;
+  let running  = false;
+
+  /* ── SHOW ── */
+  function show(index) {
+    if (running) return;
+    running = true;
+
+    const prev = current;
+    current = index;
+
+    // exit old
+    const oldSlot = slots[prev].slot;
+    oldSlot.classList.remove('active');
+    oldSlot.classList.add('exit');
+
+    // update dots
+    slots[prev].dot.classList.remove('active');
+    slots[current].dot.classList.add('active');
+
+    // enter new after fade-out
+    setTimeout(() => {
+      oldSlot.classList.remove('exit');
+
+      const newSlot = slots[current].slot;
+      newSlot.classList.add('active');
+
+      // restart progress bar
+      progBar.classList.remove('running');
+      void progBar.offsetWidth; // reflow
+      progBar.classList.add('running');
+
+      running = false;
+    }, FADE_OUT);
+  }
+
+  function advance() {
+    const next = (current + 1) % QUOTES.length;
+    show(next);
+  }
+
+  function jumpTo(i) {
+    if (i === current || running) return;
+    clearInterval(timer);
+    show(i);
+    timer = setInterval(advance, HOLD);
+  }
+
+  /* ── INIT ── */
+  function init() {
+    slots[0].slot.classList.add('active');
+    slots[0].dot.classList.add('active');
+    progBar.classList.add('running');
+    timer = setInterval(advance, HOLD);
+  }
+
+  init();
+</script>
+
+</body>
+</html>
